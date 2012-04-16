@@ -32,11 +32,15 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import javax.enterprise.inject.spi.Bean;
+import javax.enterprise.inject.spi.BeanManager;
 import javax.inject.Inject;
 import javax.inject.Named;
+import java.util.Set;
 
 /**
  * @author <a href="mailto:ales.justin@jboss.org">Ales Justin</a>
+ * @author <a href="mailto:marko.luksa@gmail.com">Marko Luksa</a>
  */
 @RunWith(Arquillian.class)
 public class SmokeNamedTest {
@@ -44,7 +48,7 @@ public class SmokeNamedTest {
     @Deployment
     public static Archive getDeployment() {
         return ShrinkWrap.create(JavaArchive.class)
-                .addPackage(Fish.class.getPackage())
+                .addPackage(SmokeNamedTest.class.getPackage())
                 .addAsManifestResource(EmptyAsset.INSTANCE, "beans.xml");
     }
 
@@ -55,4 +59,14 @@ public class SmokeNamedTest {
     public void testNamedInject() throws Exception {
         Assert.assertNotNull(carp);
     }
+
+    @Test
+    public void testNamedByDefault(BeanManager beanManager) throws Exception {
+        Set<Bean<?>> beans = beanManager.getBeans("gMOCarp");
+        Assert.assertEquals(1, beans.size());
+
+        beans = beanManager.getBeans("GMOCarp");
+        Assert.assertTrue(beans.isEmpty());
+    }
+
 }

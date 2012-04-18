@@ -66,7 +66,7 @@ public class ProducerField<X, T> extends AbstractProducerBean<X, T, Field> {
     /**
      * Constructor
      *
-     * @param method        The producer field abstraction
+     * @param field         The producer field abstraction
      * @param declaringBean The declaring bean
      * @param manager       The Bean manager
      */
@@ -77,6 +77,7 @@ public class ProducerField<X, T> extends AbstractProducerBean<X, T, Field> {
         initTypes();
         initQualifiers();
         initStereotypes();
+        initNamedQualifierFromStereotypes();
         this.proxiable = Proxies.isTypesProxyable(field.getTypeClosure());
     }
 

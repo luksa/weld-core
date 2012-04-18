@@ -139,6 +139,12 @@ public abstract class AbstractBean<T, S> extends RIBean<T> {
         mergedStereotypes = new MergedStereotypes<T, S>(getWeldAnnotated().getMetaAnnotations(Stereotype.class), beanManager);
     }
 
+    protected void initNamedQualifierFromStereotypes() {
+        if (!getWeldAnnotated().isAnnotationPresent(Named.class) && getMergedStereotypes().isBeanNameDefaulted()) {
+            qualifiers.add(new NamedLiteral(getDefaultName()));
+        }
+    }
+
     protected void checkDelegateInjectionPoints() {
         if (this.delegateInjectionPoints.size() > 0) {
             throw new DefinitionException(DELEGATE_NOT_ON_DECORATOR, this);
@@ -208,15 +214,9 @@ public abstract class AbstractBean<T, S> extends RIBean<T> {
     }
 
     protected void initDefaultQualifiers() {
-        if (qualifiers.size() == 0) {
+        if (qualifiers.size() == 0 || qualifiers.size() == 1 && qualifiers.iterator().next().annotationType().equals(Named.class)) {
             log.trace(USING_DEFAULT_QUALIFIER, this);
             this.qualifiers.add(DefaultLiteral.INSTANCE);
-        }
-        if (qualifiers.size() == 1) {
-            if (qualifiers.iterator().next().annotationType().equals(Named.class)) {
-                log.trace(USING_DEFAULT_QUALIFIER, this);
-                this.qualifiers.add(DefaultLiteral.INSTANCE);
-            }
         }
         this.qualifiers.add(AnyLiteral.INSTANCE);
 
@@ -224,9 +224,9 @@ public abstract class AbstractBean<T, S> extends RIBean<T> {
         boolean foundRemoved = false;
         Iterator<Annotation> qIter = qualifiers.iterator();
         while (qIter.hasNext()) {
-            Annotation next = qIter.next();
-            if (next.annotationType().equals(Named.class)) {
-                Named named = (Named) next;
+            Annotation annotation = qIter.next();
+            if (annotation.annotationType().equals(Named.class)) {
+                Named named = (Named) annotation;
                 if (named.value().length() == 0) {
                     qIter.remove();
                     foundRemoved = true;

@@ -81,9 +81,9 @@ public class ResolvableBuilder {
         if (mappedQualifiers.containsKey(Named.class) && injectionPoint.getMember() instanceof Field) {
             final MetaAnnotationStore store = beanManager.getServices().get(MetaAnnotationStore.class);
             Named named = (Named) mappedQualifiers.get(Named.class);
-            QualifierInstance qualifierInstance = new QualifierInstance(named, store);
             if (named.value().equals("")) {
                 qualifiers.remove(named);
+                QualifierInstance qualifierInstance = new QualifierInstance(named, store);
                 qualifierInstances.remove(qualifierInstance);
                 // This is field injection point with an @Named qualifier, with no value specified, we need to assume the name of the field is the value
                 named = new NamedLiteral(injectionPoint.getMember().getName());

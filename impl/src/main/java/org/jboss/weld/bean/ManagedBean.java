@@ -280,6 +280,7 @@ public class ManagedBean<T> extends AbstractClassBean<T> {
         initTypes();
         initQualifiers();
         initConstructor();
+        initNamedQualifierFromStereotypes();
         this.proxiable = Proxies.isTypesProxyable(type.getTypeClosure());
     }
 

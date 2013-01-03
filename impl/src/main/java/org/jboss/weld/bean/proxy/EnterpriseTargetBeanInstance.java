@@ -18,29 +18,36 @@
 package org.jboss.weld.bean.proxy;
 
 import javassist.util.proxy.MethodHandler;
+import org.jboss.weld.Container;
+import org.jboss.weld.injection.CurrentInjectionPoint;
 
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.Set;
 
+import javax.enterprise.inject.spi.InjectionPoint;
+
 /**
  * @author David Allen
  */
 public class EnterpriseTargetBeanInstance extends AbstractBeanInstance implements Serializable {
-    private static final long serialVersionUID = 2825052095047112162L;
+    private static final long serialVersionUID = 2825052095047112163L;
 
     private final Class<?> beanType;
     private final MethodHandler methodHandler;
+    private final InjectionPoint injectionPoint;
 
     public EnterpriseTargetBeanInstance(Class<?> baseType, MethodHandler methodHandler) {
         this.beanType = baseType;
         this.methodHandler = methodHandler;
+        this.injectionPoint = Container.instance().services().get(CurrentInjectionPoint.class).peek();
     }
 
     public EnterpriseTargetBeanInstance(Set<Type> types, MethodHandler methodHandler) {
         this.beanType = computeInstanceType(types);
         this.methodHandler = methodHandler;
+        this.injectionPoint = Container.instance().services().get(CurrentInjectionPoint.class).peek();
     }
 
     public Object getInstance() {
@@ -52,8 +59,14 @@ public class EnterpriseTargetBeanInstance extends AbstractBeanInstance implement
     }
 
     public Object invoke(Object instance, Method method, Object... arguments) throws Throwable {
-        // Pass the invocation directly to the method handler
-        return methodHandler.invoke(null, method, method, arguments);
+        CurrentInjectionPoint currentInjectionPoint = Container.instance().services().get(CurrentInjectionPoint.class);
+        currentInjectionPoint.push(injectionPoint);
+        try {
+            // Pass the invocation directly to the method handler
+            return methodHandler.invoke(null, method, method, arguments);
+        } finally {
+            currentInjectionPoint.pop();
+        }
     }
 
 }

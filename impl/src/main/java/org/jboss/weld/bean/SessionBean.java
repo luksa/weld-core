@@ -49,6 +49,7 @@ import javax.enterprise.inject.spi.InjectionPoint;
 import javax.enterprise.inject.spi.InjectionTarget;
 import javax.interceptor.Interceptor;
 
+import org.jboss.weld.Container;
 import org.jboss.weld.bean.interceptor.InterceptorBindingsAdapter;
 import org.jboss.weld.bean.proxy.DecorationHelper;
 import org.jboss.weld.bean.proxy.EnterpriseBeanInstance;
@@ -69,6 +70,8 @@ import org.jboss.weld.exceptions.DefinitionException;
 import org.jboss.weld.exceptions.IllegalArgumentException;
 import org.jboss.weld.exceptions.IllegalStateException;
 import org.jboss.weld.exceptions.WeldException;
+import org.jboss.weld.injection.CurrentInjectionPoint;
+import org.jboss.weld.injection.ForwardingInjectionPoint;
 import org.jboss.weld.injection.InjectionContextImpl;
 import org.jboss.weld.interceptor.spi.metadata.ClassMetadata;
 import org.jboss.weld.interceptor.spi.model.InterceptionModel;
@@ -176,7 +179,18 @@ public class SessionBean<T> extends AbstractClassBean<T> {
             new InjectionContextImpl<T>(getBeanManager(), this, getWeldAnnotated(), instance) {
 
                 public void proceed() {
-                    Beans.injectFieldsAndInitializers(instance, ctx, getBeanManager(), getInjectableFields(), getInitializerMethods());
+                    CurrentInjectionPoint currentInjectionPoint = Container.instance().services().get(CurrentInjectionPoint.class);
+                    currentInjectionPoint.push(new ForwardingInjectionPoint() {
+                        @Override
+                        protected InjectionPoint delegate() {
+                            return Container.instance().services().get(CurrentInjectionPoint.class).peek();
+                        }
+                    });
+                    try {
+                        Beans.injectFieldsAndInitializers(instance, ctx, getBeanManager(), getInjectableFields(), getInitializerMethods());
+                    } finally {
+                        currentInjectionPoint.pop();
+                    }
                 }
 
             }.run();

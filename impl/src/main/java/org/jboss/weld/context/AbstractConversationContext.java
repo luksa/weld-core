@@ -158,12 +158,8 @@ public abstract class AbstractConversationContext<R, S> extends AbstractBoundCon
                 * If the session is available, store the conversation id generator and
                 * conversations if necessary.
                 */
-                if (getSessionAttribute(request, CONVERSATION_ID_GENERATOR_ATTRIBUTE_NAME, false) == null) {
-                    setSessionAttribute(request, CONVERSATION_ID_GENERATOR_ATTRIBUTE_NAME, getRequestAttribute(request, CONVERSATION_ID_GENERATOR_ATTRIBUTE_NAME), false);
-                }
-                if (getSessionAttribute(request, CONVERSATIONS_ATTRIBUTE_NAME, false) == null) {
-                    setSessionAttribute(request, CONVERSATIONS_ATTRIBUTE_NAME, getRequestAttribute(request, CONVERSATIONS_ATTRIBUTE_NAME), false);
-                }
+                copyRequestAttributeToSession(request, CONVERSATION_ID_GENERATOR_ATTRIBUTE_NAME);
+                copyRequestAttributeToSession(request, CONVERSATIONS_ATTRIBUTE_NAME);
                 this.associated.set(null);
                 return true;
             } finally {
@@ -171,6 +167,12 @@ public abstract class AbstractConversationContext<R, S> extends AbstractBoundCon
             }
         } else {
             return false;
+        }
+    }
+
+    private void copyRequestAttributeToSession(R request, String attributeName) {
+        if (getSessionAttribute(request, attributeName, false) == null) {
+            setSessionAttribute(request, attributeName, getRequestAttribute(request, attributeName), false);
         }
     }
 
@@ -254,10 +256,11 @@ public abstract class AbstractConversationContext<R, S> extends AbstractBoundCon
                         * it. We also add it to the conversations the session knows
                         * about.
                         */
-                        if (!(getRequestAttribute(getRequest(), ConversationNamingScheme.PARAMETER_NAME) instanceof ConversationNamingScheme)) {
+                        Object attribute = getRequestAttribute(ConversationNamingScheme.PARAMETER_NAME);
+                        if (!(attribute instanceof ConversationNamingScheme)) {
                             throw new IllegalStateException("Unable to find ConversationNamingScheme in the request, this conversation wasn't transient at the start of the request");
                         }
-                        ((ConversationNamingScheme) getRequestAttribute(getRequest(), ConversationNamingScheme.PARAMETER_NAME)).setCid(getCurrentConversation().getId());
+                        ((ConversationNamingScheme) attribute).setCid(getCurrentConversation().getId());
 
                         getBeanStore().attach();
 
@@ -268,19 +271,23 @@ public abstract class AbstractConversationContext<R, S> extends AbstractBoundCon
                 }
             }
             setBeanStore(null);
-            // Clean up any expired conversations
-            Iterator<Entry<String, ManagedConversation>> entryIterator = getConversationMap().entrySet().iterator();
-            while (entryIterator.hasNext()) {
-                Entry<String, ManagedConversation> entry = entryIterator.next();
-                if (entry.getValue().isTransient()) {
-                    destroyConversation(getSessionFromRequest(getRequest(), false), entry.getKey());
-                    entryIterator.remove();
-                }
-            }
+            destroyExpiredConversations();
+
             // deactivate the context
             super.setActive(false);
         } else {
             throw new IllegalStateException("Context is not active");
+        }
+    }
+
+    private void destroyExpiredConversations() {
+        Iterator<Entry<String, ManagedConversation>> iterator = getConversationMap().entrySet().iterator();
+        while (iterator.hasNext()) {
+            Entry<String, ManagedConversation> entry = iterator.next();
+            if (entry.getValue().isTransient()) {
+                destroyConversation(getSessionFromRequest(getRequest(), false), entry.getKey());
+                iterator.remove();
+            }
         }
     }
 
@@ -304,9 +311,10 @@ public abstract class AbstractConversationContext<R, S> extends AbstractBoundCon
         }
 
         try {
-            if (getSessionAttributeFromSession(session, CONVERSATIONS_ATTRIBUTE_NAME) instanceof Map<?, ?>) {
+            Object attribute = getSessionAttributeFromSession(session, CONVERSATIONS_ATTRIBUTE_NAME);
+            if (attribute instanceof Map<?, ?>) {
                 // if there are conversations to destroy
-                Map<String, ManagedConversation> conversations = cast(getSessionAttributeFromSession(session, CONVERSATIONS_ATTRIBUTE_NAME));
+                Map<String, ManagedConversation> conversations = cast(attribute);
                 // if the context is not active, let's activate it
                 setActive(true);
 
@@ -357,11 +365,16 @@ public abstract class AbstractConversationContext<R, S> extends AbstractBoundCon
         if (!isAssociated()) {
             throw new IllegalStateException("A request must be associated with the context in order to generate a conversation id");
         }
-        if (!(getRequestAttribute(getRequest(), CONVERSATION_ID_GENERATOR_ATTRIBUTE_NAME) instanceof ConversationIdGenerator)) {
+        Object attribute = getRequestAttribute(CONVERSATION_ID_GENERATOR_ATTRIBUTE_NAME);
+        if (!(attribute instanceof ConversationIdGenerator)) {
             throw new IllegalStateException("Unable to locate ConversationIdGenerator");
         }
-        ConversationIdGenerator generator = (ConversationIdGenerator) getRequestAttribute(getRequest(), CONVERSATION_ID_GENERATOR_ATTRIBUTE_NAME);
+        ConversationIdGenerator generator = (ConversationIdGenerator) attribute;
         return generator.call();
+    }
+
+    private Object getRequestAttribute(String attributeName) {
+        return getRequestAttribute(getRequest(), attributeName);
     }
 
     private static boolean isExpired(ManagedConversation conversation) {
@@ -384,18 +397,20 @@ public abstract class AbstractConversationContext<R, S> extends AbstractBoundCon
 
     private Map<String, ManagedConversation> getConversationMap() {
         checkIsAssociated();
-        if (!(getRequestAttribute(getRequest(), CONVERSATIONS_ATTRIBUTE_NAME) instanceof Map<?, ?>)) {
+        Object attribute = getRequestAttribute(CONVERSATIONS_ATTRIBUTE_NAME);
+        if (!(attribute instanceof Map<?, ?>)) {
             throw new IllegalStateException(UNABLE_TO_LOAD_CURRENT_CONVERSATION);
         }
-        return cast(getRequestAttribute(getRequest(), CONVERSATIONS_ATTRIBUTE_NAME));
+        return cast(attribute);
     }
 
     public ManagedConversation getCurrentConversation() {
         checkIsAssociated();
-        if (!(getRequestAttribute(getRequest(), CURRENT_CONVERSATION_ATTRIBUTE_NAME) instanceof ManagedConversation)) {
+        Object attribute = getRequestAttribute(CURRENT_CONVERSATION_ATTRIBUTE_NAME);
+        if (!(attribute instanceof ManagedConversation)) {
             throw new IllegalStateException(UNABLE_TO_LOAD_CURRENT_CONVERSATION);
         }
-        return (ManagedConversation) getRequestAttribute(getRequest(), CURRENT_CONVERSATION_ATTRIBUTE_NAME);
+        return (ManagedConversation) attribute;
     }
 
     public Class<? extends Annotation> getScope() {

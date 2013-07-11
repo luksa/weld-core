@@ -213,7 +213,6 @@ public abstract class AbstractConversationContext<R, S> extends AbstractBoundCon
                 if (conversation != null && !isExpired(conversation)) {
                     boolean lock = conversation.lock(getConcurrentAccessTimeout());
                     if (lock) {
-                        conversation.touch();
                         associateRequest(cid);
                     } else {
                         // Associate the request with a new transient conversation

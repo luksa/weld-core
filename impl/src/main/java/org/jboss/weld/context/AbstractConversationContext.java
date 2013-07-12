@@ -289,9 +289,9 @@ public abstract class AbstractConversationContext<R, S> extends AbstractBoundCon
         for (ManagedConversation conversation : getConversations()) {
             if (isExpired(conversation)) {
                 if (!conversation.isTransient()) {
-                	if(conversation == getCurrentConversation()){
-                		conversation.touch();
-                	}
+                    if(conversation == getCurrentConversation()){
+                        conversation.touch();
+                    }
                     conversation.end();
                 }
             }

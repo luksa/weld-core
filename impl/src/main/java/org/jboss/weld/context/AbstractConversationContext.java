@@ -286,10 +286,9 @@ public abstract class AbstractConversationContext<R, S> extends AbstractBoundCon
 
     @Override
     public void invalidate() {
-        // Touch the current conversation since it has been activated and should not have expired since activation.
-        getCurrentConversation().touch();
         for (ManagedConversation conversation : getConversations()) {
-            if (isExpired(conversation)) {
+            // Current conversation may only be expired upon activation
+            if (conversation != getCurrentConversation() && isExpired(conversation)) {
                 if (!conversation.isTransient()) {
                     conversation.end();
                 }

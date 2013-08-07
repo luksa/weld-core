@@ -60,15 +60,24 @@ public class ConversationImpl implements ManagedConversation, Serializable {
     private ReentrantLock concurrencyLock;
     private long lastUsed;
 
-    private ActiveConversationContextProxy activeConversationContextProxy;
+    private final Instance<ConversationContext> conversationContexts;
+
+    private transient ActiveConversationContextProxy activeConversationContextProxy;
 
     @Inject
     public ConversationImpl(Instance<ConversationContext> conversationContexts) {
-        this.activeConversationContextProxy = new ActiveConversationContextProxy(conversationContexts);
+        this.conversationContexts = conversationContexts;
         this._transient = true;
-        this.timeout = activeConversationContextProxy.getDefaultTimeout();
+        this.timeout = getActiveConversationContextProxy().getDefaultTimeout();
         this.concurrencyLock = new ReentrantLock();
         touch();
+    }
+
+    private ActiveConversationContextProxy getActiveConversationContextProxy() {
+        if (activeConversationContextProxy == null) {
+            activeConversationContextProxy = new ActiveConversationContextProxy(conversationContexts);
+        }
+        return activeConversationContextProxy;
     }
 
     public void begin() {
@@ -79,7 +88,7 @@ public class ConversationImpl implements ManagedConversation, Serializable {
         _transient = false;
         if (this.id == null) {
             // This a conversation that was made transient previously in this request
-            this.id = activeConversationContextProxy.generateConversationId();
+            this.id = getActiveConversationContextProxy().generateConversationId();
         }
         log.debug(PROMOTED_TRANSIENT, id);
     }
@@ -89,7 +98,7 @@ public class ConversationImpl implements ManagedConversation, Serializable {
         if (!_transient) {
             throw new IllegalStateException(BEGIN_CALLED_ON_LONG_RUNNING_CONVERSATION);
         }
-        if (activeConversationContextProxy.getConversation(id) != null) {
+        if (getActiveConversationContextProxy().getConversation(id) != null) {
             throw new IllegalArgumentException(CONVERSATION_ID_ALREADY_IN_USE, id);
         }
         _transient = false;
@@ -182,7 +191,7 @@ public class ConversationImpl implements ManagedConversation, Serializable {
     }
 
     private void verifyConversationContextActive() {
-        if (!activeConversationContextProxy.isContextActive()) {
+        if (!getActiveConversationContextProxy().isContextActive()) {
             throw new ContextNotActiveException("Conversation Context not active when method called on conversation " + this);
         }
     }

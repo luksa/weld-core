@@ -158,7 +158,11 @@ public class HttpContextLifecycle implements Service {
             }
             beanManager.getAccessibleLenientObserverNotifier().fireEvent(request, InitializedLiteral.REQUEST);
         } catch (RuntimeException e) {
-            requestDestroyed(request);
+            try {
+                requestDestroyed(request);
+            } catch (Exception ignored) {
+                // ignored in order to throw the original exception instead of this one
+            }
             /*
              * If the servlet container happens to call the destroyed callback again, ignore it.
              */
